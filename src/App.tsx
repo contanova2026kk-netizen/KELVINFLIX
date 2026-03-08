@@ -9,6 +9,11 @@ import IntroAnimation from './components/IntroAnimation';
 import { UserProfile } from './types';
 import { io, Socket } from 'socket.io-client';
 import { Home as HomeIcon, User, Users, LogOut, Gamepad2 } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = "https://wffmsfbsutddbykapisv.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmZm1zZmJzdXRkZGJ5a2FwaXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MzI5MTMsImV4cCI6MjA4ODUwODkxM30.4IoT68xNsQ2B-mN64rDDTk27WgBUFTMc5VZMisYrirQ";
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 type View = 'home' | 'profile' | 'friends' | 'room' | 'games';
 
