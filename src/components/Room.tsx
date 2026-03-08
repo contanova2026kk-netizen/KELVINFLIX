@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player';
 import { io, Socket } from 'socket.io-client';
 import { UserProfile } from '../types';
-import { Send, Image as ImageIcon, Smile, PenTool, X, Trash2, Users, ArrowLeft, Play } from 'lucide-react';
+import { Send, Image as ImageIcon, Smile, PenTool, X, Trash2, Users, ArrowLeft, Play, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
@@ -56,6 +56,49 @@ const isOnlyEmojis = (text: string) => {
   return emojiRegex.test(stripped);
 };
 
+const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+const renderMessageText = (text: string, onPlayVideo: (url: string) => void) => {
+  const parts = text.split(urlRegex);
+  
+  if (parts.length === 1) return text;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="whitespace-pre-wrap break-words">
+        {parts.map((part, i) => {
+          if (part.match(urlRegex)) {
+            return (
+              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-blue-200 text-blue-300 break-all">
+                {part}
+              </a>
+            );
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </div>
+      
+      {parts.filter(p => p.match(urlRegex)).map((url, i) => {
+        const isVideo = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('.mp4') || url.includes('vimeo.com') || url.includes('twitch.tv');
+        if (isVideo) {
+          return (
+            <button
+              key={`btn-${i}`}
+              onClick={() => onPlayVideo(url)}
+              className="flex w-fit items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              <Play size={12} fill="currentColor" />
+              Reproduzir Vídeo na Sala
+            </button>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+};
+
+
 export default function Room({ roomId, password, profile, onLeave }: RoomProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
@@ -100,6 +143,7 @@ export default function Room({ roomId, password, profile, onLeave }: RoomProps) 
     newSocket.emit('join-room', {
       roomId,
       password,
+      id: profile.id,
       username: profile.username,
       avatar: profile.avatar
     });
@@ -336,11 +380,24 @@ export default function Room({ roomId, password, profile, onLeave }: RoomProps) 
     }
   };
 
-  const copyInviteLink = () => {
+  const copyInviteLink = async () => {
     const url = `${window.location.origin}/?room=${roomId}`;
-    navigator.clipboard.writeText(url);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Kevinflix - Sala de Cinema',
+          text: `Venha assistir algo comigo na sala: ${roomId}`,
+          url: url
+        });
+      } catch (err) {
+        console.log('Share failed or cancelled');
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
   };
 
   const handleSelectMovie = (url: string) => {
@@ -351,396 +408,434 @@ export default function Room({ roomId, password, profile, onLeave }: RoomProps) 
   };
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100 font-sans">
+    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden aura-bg">
       {/* Header */}
-      <header className="flex items-center justify-between p-3 md:p-4 bg-zinc-900 border-b border-zinc-800">
-        <div className="flex items-center gap-2 md:gap-4">
+      <header className="flex-none flex items-center justify-between p-4 md:p-6 glass border-b border-white/5 z-30 shadow-2xl">
+        <div className="flex items-center gap-4 md:gap-8">
           <motion.button
-            whileHover={{ scale: 1.1 }}
+            whileHover={{ scale: 1.1, x: -2 }}
             whileTap={{ scale: 0.9 }}
             onClick={onLeave}
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-zinc-500 hover:text-white transition-all hover:bg-white/10"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={24} />
           </motion.button>
-          <h1 className="text-xl md:text-2xl font-bold text-red-600 tracking-tighter">KEVINFLIX</h1>
+          <div className="flex flex-col">
+            <h1 className="text-2xl md:text-3xl font-black text-red-600 tracking-tighter drop-shadow-[0_0_10px_rgba(220,38,38,0.5)] leading-none">
+              KEVINFLIX
+            </h1>
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mt-1">Sala de Cinema</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="hidden md:flex items-center gap-2 text-sm text-zinc-400">
-            <Users size={16} />
-            <span>Sala: {roomId}</span>
+
+        <div className="flex items-center gap-3 md:gap-6">
+          <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 glass rounded-2xl border-white/10">
+            <Users size={18} className="text-red-500" />
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-300">ID: {roomId}</span>
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={copyInviteLink}
-            className={`px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${copySuccess ? 'bg-green-600 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100'}`}
+            className={`px-6 py-3 text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl ${copySuccess ? 'bg-green-600 text-white glow-green' : 'glass hover:bg-white/10 text-white border-white/20'}`}
           >
-            {copySuccess ? 'Copiado!' : 'Convidar Amigo'}
+            {copySuccess ? 'COPIADO!' : 'CONVIDAR AMIGO'}
           </motion.button>
         </div>
       </header>
 
-      {/* Video Area */}
-      <div className="flex-none bg-black relative overflow-hidden" style={{ height: '35vh', minHeight: '250px' }}>
-        {!videoUrl ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center z-10">
-            <div className="max-w-md w-full space-y-4">
-              <h2 className="text-lg md:text-xl font-semibold text-zinc-300">O que vamos assistir?</h2>
-              <form onSubmit={handleLoadVideo} className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  placeholder="Cole um link ou escolha da biblioteca..."
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  className="flex-1 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg focus:outline-none focus:border-red-500 transition-colors text-sm"
-                />
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* Main Content Area (Video/Board) */}
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-black/40">
+
+          {/* Video Section */}
+          <div className="flex-1 relative flex items-center justify-center p-4 md:p-8">
+            <div className="absolute inset-0 bg-red-600/5 blur-[120px] rounded-full pointer-events-none" />
+
+            {!videoUrl ? (
+              <div className="relative z-10 w-full max-w-2xl glass-card rounded-[3rem] p-10 md:p-16 text-center space-y-10 animate-in fade-in zoom-in duration-500">
+                <div className="w-24 h-24 bg-red-600/10 rounded-[2.5rem] flex items-center justify-center mx-auto glow-red border border-red-500/20">
+                  <Play size={40} className="text-red-500 fill-red-500 ml-1" />
+                </div>
+                <div className="space-y-3">
+                  <h2 className="text-3xl font-black text-white tracking-tight uppercase">Sessão Suspensa</h2>
+                  <p className="text-zinc-500 font-medium text-lg">Insira um link ou escolha algo da sua biblioteca</p>
+                </div>
+                <form onSubmit={handleLoadVideo} className="flex flex-col sm:flex-row gap-4">
+                  <input
+                    type="text"
+                    placeholder="URL DO VÍDEO (YOUTUBE, MP4, ETC)"
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    className="flex-1 px-8 py-5 glass border-white/10 rounded-2xl focus:outline-none focus:border-red-500 focus:bg-white/10 transition-all text-sm font-bold tracking-tight text-white placeholder:text-zinc-700"
+                  />
+                  <button
+                    type="submit"
+                    className="px-10 py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all glow-red uppercase tracking-widest"
+                  >
+                    LANÇAR
+                  </button>
+                </form>
                 <button
-                  type="submit"
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm"
+                  onClick={() => setShowLibrary(true)}
+                  className="flex items-center gap-2 mx-auto text-xs font-black text-zinc-600 hover:text-white transition-all uppercase tracking-widest"
                 >
-                  Reproduzir
-                </button>
-              </form>
-              <button
-                onClick={() => setShowLibrary(true)}
-                className="text-xs text-zinc-500 hover:text-white transition-colors underline"
-              >
-                Ou escolher da minha biblioteca
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full h-full relative group">
-            <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-              <button
-                onClick={() => setShowLibrary(true)}
-                className="px-3 py-1.5 bg-black/70 hover:bg-zinc-800 text-white text-xs font-medium rounded-lg backdrop-blur-sm transition-colors border border-white/10"
-              >
-                Biblioteca
-              </button>
-              <button
-                onClick={() => {
-                  if (socket) socket.emit('video-url', '');
-                  setVideoUrl('');
-                }}
-                className="px-3 py-1.5 bg-black/70 hover:bg-red-600 text-white text-xs font-medium rounded-lg backdrop-blur-sm transition-colors border border-white/10"
-              >
-                Fechar
-              </button>
-            </div>
-            {/* @ts-ignore */}
-            <ReactPlayer
-              ref={playerRef}
-              url={videoUrl}
-              width="100%"
-              height="100%"
-              playing={playing}
-              controls={true}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              style={{ position: 'absolute', top: 0, left: 0, zIndex: 0 }}
-              {...({} as any)}
-            />
-          </div>
-        )}
-
-        {/* Library Modal */}
-        <AnimatePresence>
-          {showLibrary && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-md p-6 overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold">Minha Biblioteca</h3>
-                <button onClick={() => setShowLibrary(false)} className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
-                  <X />
+                  <Plus size={16} />
+                  ACESSAR MINHA BIBLIOTECA
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {myMovies.map((movie) => (
-                  <div
-                    key={movie.id}
-                    onClick={() => handleSelectMovie(movie.video_url)}
-                    className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden cursor-pointer hover:border-red-600 transition-colors group"
+            ) : (
+              <div className="w-full h-full relative group rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(220,38,38,0.1)] border border-white/5">
+                <div className="absolute top-6 right-6 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0 flex gap-3">
+                  <button
+                    onClick={() => setShowLibrary(true)}
+                    className="px-6 py-3 glass hover:bg-white/10 text-white text-[10px] font-black rounded-xl backdrop-blur-3xl transition-all border border-white/20 uppercase tracking-widest"
                   >
-                    <div className="aspect-video bg-zinc-950 relative">
-                      <img src={movie.thumbnail} className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Play fill="white" />
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <p className="text-sm font-medium truncate">{movie.title}</p>
-                    </div>
-                  </div>
-                ))}
-                {myMovies.length === 0 && (
-                  <p className="col-span-full text-center text-zinc-500 py-10">Sua biblioteca está vazia.</p>
-                )}
+                    BIBLIOTECA
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (socket) socket.emit('video-url', '');
+                      setVideoUrl('');
+                    }}
+                    className="px-6 py-3 glass hover:bg-red-600 text-white text-[10px] font-black rounded-xl backdrop-blur-3xl transition-all border border-white/20 uppercase tracking-widest"
+                  >
+                    FECHAR
+                  </button>
+                </div>
+                {/* @ts-ignore */}
+                <ReactPlayer
+                  ref={playerRef}
+                  url={videoUrl}
+                  width="100%"
+                  height="100%"
+                  playing={playing}
+                  controls={true}
+                  playsinline={true}
+                  config={{
+                    youtube: {
+                      playerVars: { showinfo: 1, origin: window.location.origin }
+                    }
+                  }}
+                  onError={(e) => {
+                    console.error('Video Error:', e);
+                    setMessages(prev => [...prev, {
+                      id: Math.random().toString(),
+                      userId: 'system',
+                      username: 'Sistema',
+                      text: 'Erro ao carregar o vídeo. Verifique o link.',
+                      timestamp: Date.now(),
+                      isSystem: true
+                    }]);
+                  }}
+                  onPlay={handlePlay}
+                  onPause={handlePause}
+                  className="rounded-[2rem] overflow-hidden"
+                  style={{ position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+                  {...({} as any)}
+                />
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col relative overflow-hidden bg-zinc-950">
-        {isDrawingMode ? (
-          <div className="flex-1 flex flex-col bg-[#f8f9fa] relative overflow-hidden">
-            {/* Dot pattern background */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-zinc-200">
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="w-8 h-8 rounded-full cursor-pointer bg-transparent border-none overflow-hidden"
-              />
-              <div className="w-px h-6 bg-zinc-200 mx-1"></div>
-              <button onClick={clearDrawing} className="p-2 text-zinc-500 hover:text-red-500 transition-colors rounded-full hover:bg-zinc-100" title="Limpar tudo">
-                <Trash2 size={18} />
-              </button>
-              <div className="w-px h-6 bg-zinc-200 mx-1"></div>
-              <button
-                onClick={() => setIsDrawingMode(false)}
-                className="p-2 text-zinc-500 hover:text-zinc-800 transition-colors rounded-full hover:bg-zinc-100"
-                title="Fechar"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="flex-1 relative">
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={600}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseOut={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-                className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
-              />
-            </div>
+            )}
           </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <AnimatePresence initial={false}>
-              {messages.map((msg) => {
-                if (msg.isSystem) {
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex justify-center my-2"
-                    >
-                      <span className="text-xs text-zinc-500 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
-                        {msg.text}
-                      </span>
-                    </motion.div>
-                  );
-                }
 
-                const isMe = msg.username === profile.username;
-                return (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                    className={`flex flex-col max-w-[80%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}
-                  >
-                    <div className={`flex items-end gap-2 mb-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                      {msg.avatar ? (
-                        <img src={msg.avatar} alt={msg.username} className="w-6 h-6 rounded-full bg-zinc-800 object-cover" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 font-bold uppercase">
-                          {msg.username.charAt(0)}
-                        </div>
-                      )}
-                      <span className="text-xs text-zinc-500">{msg.username}</span>
-                    </div>
-                    {msg.text.startsWith('[IMAGE]') ? (
-                      <div className={`px-4 py-2 rounded-2xl ${isMe ? 'bg-red-600 rounded-tr-sm' : 'bg-zinc-800 rounded-tl-sm'}`}>
-                        <img src={msg.text.replace('[IMAGE]', '')} alt="Uploaded" className="max-w-full rounded-lg" />
-                      </div>
-                    ) : isOnlyEmojis(msg.text) ? (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", bounce: 0.6 }}
-                        className="text-5xl py-2"
-                      >
-                        {msg.text}
-                      </motion.div>
-                    ) : (
-                      <div className={`px-4 py-2 rounded-2xl ${isMe ? 'bg-red-600 text-white rounded-tr-sm' : 'bg-zinc-800 text-zinc-200 rounded-tl-sm'}`}>
-                        {msg.text}
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-            <div ref={chatEndRef} />
-          </div>
-        )}
-
-        {/* Chat Input */}
-        <div className="p-2 md:p-4 bg-zinc-900 border-t border-zinc-800 relative">
+          {/* Drawing Board Layer */}
           <AnimatePresence>
-            {showEmojis && (
+            {isDrawingMode && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                className="absolute bottom-full right-4 mb-2 p-3 bg-zinc-800 border border-zinc-700 rounded-2xl shadow-xl w-72 max-h-80 flex flex-col z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-40 bg-zinc-100/95 backdrop-blur-md overflow-hidden flex flex-col"
               >
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
-                  <div>
-                    <h4 className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Combos</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {emojiCombos.map(combo => (
-                        <motion.button
-                          whileHover={{ scale: 1.05, backgroundColor: '#3f3f46' }}
-                          whileTap={{ scale: 0.95 }}
-                          key={combo}
-                          type="button"
-                          onClick={() => {
-                            setNewMessage(prev => prev + combo);
-                            setShowEmojis(false);
-                          }}
-                          className="text-sm p-2 bg-zinc-900 rounded-lg hover:bg-zinc-700 transition-colors"
-                        >
-                          {combo}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                {/* Dot pattern background */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
 
-                  <div>
-                    <h4 className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Emojis</h4>
-                    <div className="grid grid-cols-5 gap-2">
-                      {singleEmojis.map(emoji => (
-                        <motion.button
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.9 }}
-                          key={emoji}
-                          type="button"
-                          onClick={() => {
-                            setNewMessage(prev => prev + emoji);
-                            setShowEmojis(false);
-                          }}
-                          className="text-xl p-1 hover:bg-zinc-700 rounded-lg transition-colors"
-                        >
-                          {emoji}
-                        </motion.button>
-                      ))}
-                    </div>
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-4 glass rounded-[2.5rem] shadow-2xl border-white/20 bg-white/50 backdrop-blur-2xl">
+                  <div className="flex items-center gap-2 px-2">
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="w-10 h-10 rounded-2xl cursor-pointer bg-transparent border-none p-0 overflow-hidden shadow-sm"
+                    />
                   </div>
+                  <div className="w-px h-8 bg-black/10 mx-2"></div>
+                  <button onClick={clearDrawing} className="w-12 h-12 flex items-center justify-center text-zinc-500 hover:text-red-600 transition-all rounded-2xl hover:bg-white/50" title="LIMPAR QUADRO">
+                    <Trash2 size={22} />
+                  </button>
+                  <div className="w-px h-8 bg-black/10 mx-2"></div>
+                  <button
+                    onClick={() => setIsDrawingMode(false)}
+                    className="w-12 h-12 flex items-center justify-center text-zinc-500 hover:text-black transition-all rounded-2xl hover:bg-white/50"
+                    title="FECHAR QUADRO"
+                  >
+                    <X size={26} />
+                  </button>
+                </div>
 
-                  <div>
-                    <h4 className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Símbolos</h4>
-                    <div className="grid grid-cols-5 gap-2">
-                      {customSymbols.map(symbol => (
-                        <motion.button
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.9 }}
-                          key={symbol}
-                          type="button"
-                          onClick={() => {
-                            setNewMessage(prev => prev + symbol);
-                            setShowEmojis(false);
-                          }}
-                          className="text-xl p-1 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors"
-                        >
-                          {symbol}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                <div className="flex-1 relative cursor-crosshair">
+                  <canvas
+                    ref={canvasRef}
+                    width={1920}
+                    height={1080}
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseOut={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                    className="absolute inset-0 w-full h-full touch-none"
+                  />
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          <form onSubmit={handleSendMessage} className="flex items-center gap-1 md:gap-2">
-            <div className="relative">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                type="button"
-                onClick={() => setIsDrawingMode(!isDrawingMode)}
-                className={`p-2 md:p-3 rounded-full transition-colors relative ${isDrawingMode ? 'text-red-500 bg-red-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
-                title={isDrawingMode ? "Fechar desenho" : "Abrir papel de desenho"}
-              >
-                <PenTool size={20} />
-                {activeDrawers.length > 0 && !isDrawingMode && (
-                  <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-zinc-900 rounded-full animate-pulse" title={`${activeDrawers.join(', ')} desenhando`}></span>
-                )}
-              </motion.button>
-              {activeDrawers.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-2 whitespace-nowrap bg-zinc-800 text-xs px-2 py-1 rounded text-zinc-300 pointer-events-none">
-                  {activeDrawers.join(', ')} desenhando...
-                </div>
-              )}
+        </div>
+
+        {/* Sidebar - Chat Area */}
+        <div className="w-full md:w-96 flex flex-col bg-white/[0.02] border-l border-white/5 relative z-20">
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Messages List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              <AnimatePresence initial={false}>
+                {messages.map((msg) => {
+                  if (msg.isSystem) {
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex justify-center my-4"
+                      >
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                          {msg.text}
+                        </span>
+                      </motion.div>
+                    );
+                  }
+
+                  const isMe = (msg.id === profile.id || msg.userId === profile.id || msg.username === profile.username);
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      className={`flex flex-col max-w-[90%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                    >
+                      <div className={`flex items-center gap-3 mb-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div className="w-8 h-8 rounded-xl bg-zinc-900 overflow-hidden border border-white/10 shadow-lg">
+                          {msg.avatar ? (
+                            <img src={msg.avatar} alt={msg.username} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-zinc-600 uppercase">
+                              {msg.username.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{msg.username}</span>
+                      </div>
+
+                      {msg.text.startsWith('[IMAGE]') ? (
+                        <div className={`p-2 rounded-[1.5rem] glass-card ${isMe ? 'rounded-tr-none' : 'rounded-tl-none'}`}>
+                          <img src={msg.text.replace('[IMAGE]', '')} alt="Uploaded" className="max-w-full rounded-2xl shadow-2xl" />
+                        </div>
+                      ) : isOnlyEmojis(msg.text) ? (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", bounce: 0.6 }}
+                          className="text-6xl py-2 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+                        >
+                          {msg.text}
+                        </motion.div>
+                      ) : (
+                        <div className={`px-5 py-3.5 text-sm font-bold shadow-2xl transition-all ${isMe
+                          ? 'bg-red-600 text-white rounded-[1.5rem] rounded-tr-none glow-red'
+                          : 'glass text-zinc-200 rounded-[1.5rem] rounded-tl-none border-white/10'}`}>
+                          {renderMessageText(msg.text, (url) => {
+                            if (socket) socket.emit('video-url', url);
+                          })}
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+              <div ref={chatEndRef} />
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 md:p-3 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-colors"
-            >
-              <ImageIcon size={20} />
-            </motion.button>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-            />
+            {/* Chat Controls & Input */}
+            <div className="p-6 bg-white/[0.02] border-t border-white/5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setIsDrawingMode(!isDrawingMode)}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isDrawingMode ? 'bg-red-600 text-white glow-red' : 'glass text-zinc-500 hover:text-white'}`}
+                  >
+                    <PenTool size={20} />
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-12 h-12 rounded-2xl glass flex items-center justify-center text-zinc-500 hover:text-white transition-all"
+                  >
+                    <ImageIcon size={20} />
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowEmojis(!showEmojis)}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${showEmojis ? 'bg-purple-600 text-white glow-accent' : 'glass text-zinc-500 hover:text-white'}`}
+                  >
+                    <Smile size={20} />
+                  </motion.button>
+                </div>
 
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              type="button"
-              onClick={() => setShowEmojis(!showEmojis)}
-              className={`p-2 md:p-3 rounded-full transition-colors ${showEmojis ? 'text-red-500 bg-red-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
-            >
-              <Smile size={20} />
-            </motion.button>
+                {activeDrawers.length > 0 && !isDrawingMode && (
+                  <div className="px-4 py-2 glass rounded-xl border-red-500/20 flex items-center gap-3 animate-pulse">
+                    <div className="w-2 h-2 bg-red-600 rounded-full" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-red-500">Desenho Ativo</span>
+                  </div>
+                )}
+              </div>
 
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Mensagem..."
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-full px-3 md:px-4 py-2 text-sm md:text-base focus:outline-none focus:border-zinc-600 transition-colors min-w-0"
-            />
-
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              type="submit"
-              disabled={!newMessage.trim()}
-              className="p-2 md:p-3 bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-full transition-colors flex-shrink-0"
-            >
-              <Send size={18} />
-            </motion.button>
-          </form>
+              <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="DIGITE ALGO..."
+                  className="flex-1 glass border-white/10 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-red-500/50 transition-all placeholder:text-zinc-800"
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim()}
+                  className="w-14 h-14 bg-red-600 hover:bg-red-700 disabled:bg-zinc-900 disabled:text-zinc-700 text-white rounded-2xl transition-all flex items-center justify-center shadow-xl glow-red disabled:glow-none"
+                >
+                  <Send size={24} className="rotate-[-10deg] -mr-1" />
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Popovers & Overlays */}
+      <AnimatePresence>
+        {showEmojis && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="fixed bottom-24 right-96 mr-6 mb-2 p-6 glass-card rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-80 max-h-96 flex flex-col z-[100] border-white/20"
+          >
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-6">
+              <div>
+                <h4 className="text-[10px] font-black text-zinc-500 mb-3 uppercase tracking-widest">Reações</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {emojiCombos.map(combo => (
+                    <motion.button
+                      whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                      whileTap={{ scale: 0.95 }}
+                      key={combo}
+                      onClick={() => {
+                        setNewMessage(prev => prev + combo);
+                        setShowEmojis(false);
+                      }}
+                      className="text-base p-3 glass rounded-xl text-white transition-all border-white/5"
+                    >
+                      {combo}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-zinc-500 mb-3 uppercase tracking-widest">Emojis</h4>
+                <div className="grid grid-cols-5 gap-2">
+                  {singleEmojis.map(emoji => (
+                    <motion.button
+                      whileHover={{ scale: 1.3 }}
+                      whileTap={{ scale: 0.8 }}
+                      key={emoji}
+                      onClick={() => {
+                        setNewMessage(prev => prev + emoji);
+                        setShowEmojis(false);
+                      }}
+                      className="text-2xl p-2 hover:bg-white/5 rounded-xl transition-all"
+                    >
+                      {emoji}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showLibrary && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-zinc-950/90 backdrop-blur-3xl p-8 flex items-center justify-center"
+          >
+            <div className="glass-card rounded-[3rem] w-full max-w-5xl p-10 space-y-10 relative shadow-[0_0_100px_rgba(0,0,0,0.8)] border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-4xl font-black text-white tracking-tighter uppercase">Minha Biblioteca</h3>
+                  <p className="text-zinc-500 font-medium tracking-wide">Escolha o que vamos assistir agora</p>
+                </div>
+                <button onClick={() => setShowLibrary(false)} className="w-14 h-14 glass rounded-2xl flex items-center justify-center text-zinc-500 hover:text-white transition-all hover:rotate-90">
+                  <X size={32} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-h-[60vh] overflow-y-auto custom-scrollbar pr-4">
+                {myMovies.map((movie) => (
+                  <div
+                    key={movie.id}
+                    onClick={() => handleSelectMovie(movie.video_url)}
+                    className="glass-card rounded-[1.5rem] overflow-hidden group cursor-pointer border-white/5 hover:border-red-500/50 transition-all duration-500"
+                  >
+                    <div className="aspect-[2/3] bg-zinc-950 relative overflow-hidden">
+                      <img src={movie.thumbnail} className="w-full h-full object-cover opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-60" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl glow-red">
+                          <Play fill="#dc2626" className="text-red-600 ml-1" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <p className="text-sm font-black text-white leading-tight drop-shadow-lg truncate">{movie.title}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {myMovies.length === 0 && (
+                  <div className="col-span-full py-20 text-center opacity-30">
+                    <Plus size={64} className="mx-auto mb-4" />
+                    <p className="text-xl font-black uppercase tracking-widest">Sua lista está vazia</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+      />
     </div>
   );
 }

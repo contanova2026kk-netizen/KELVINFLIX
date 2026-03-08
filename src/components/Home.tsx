@@ -96,13 +96,20 @@ export default function Home({ socket, profile, onJoinRoom }: HomeProps) {
 
   const handleAddMovie = (e: React.FormEvent) => {
     e.preventDefault();
-    if (socket && profile.username && newMovieTitle && newMovieUrl) {
+    const cleanUrl = newMovieUrl.trim();
+    if (socket && profile.username && newMovieTitle.trim() && cleanUrl) {
+      // Basic validation for common video hosts
+      const isYoutube = cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be');
+      const videoId = isYoutube ? (cleanUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/)?.[1] || '') : '';
+
       socket.emit('add-movie', {
         username: profile.username,
         movie: {
-          title: newMovieTitle,
-          videoUrl: newMovieUrl,
-          thumbnail: `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&q=80`, // Default for now
+          title: newMovieTitle.trim(),
+          videoUrl: cleanUrl,
+          thumbnail: isYoutube && videoId
+            ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+            : `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&q=80`,
           duration: '0:00'
         }
       });
@@ -133,62 +140,76 @@ export default function Home({ socket, profile, onJoinRoom }: HomeProps) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
+    <div className="max-w-7xl mx-auto space-y-16 pb-12">
       {/* Rooms Section */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Users size={24} className="text-red-600" />
-              Salas Ativas
+      <section className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h2 className="text-4xl font-black text-white tracking-tighter flex items-center gap-3">
+              <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center glow-red">
+                <Users size={28} className="text-red-500" />
+              </div>
+              SALAS ATIVAS
             </h2>
-            <p className="text-zinc-500 text-sm">{rooms.length} salas disponíveis</p>
+            <p className="text-zinc-500 font-medium tracking-wide">Explore {rooms.length} salas de cinema agora</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-red-900/20"
+            className="group relative flex items-center gap-3 px-8 py-4 bg-red-600 text-white font-black rounded-2xl transition-all hover:scale-105 active:scale-95 glow-red overflow-hidden"
           >
-            <Plus size={18} />
-            Criar Sala
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+            CRIAR MINHA SALA
           </button>
         </div>
 
         {rooms.length === 0 ? (
-          <div className="py-12 bg-zinc-900/40 rounded-3xl border border-zinc-800/50 flex flex-col items-center justify-center text-center">
-            <Play size={40} className="text-zinc-800 mb-3" />
-            <p className="text-zinc-400">Nenhuma sala ativa no momento.</p>
+          <div className="py-24 glass rounded-[2.5rem] border-white/5 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
+              <Play size={40} className="text-zinc-700" />
+            </div>
+            <p className="text-zinc-500 font-medium text-lg">O cinema está vazio. Que tal ser o primeiro?</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {rooms.map((room) => (
-              <div key={room.id} className="bg-zinc-900/60 rounded-2xl border border-zinc-800 overflow-hidden hover:border-zinc-700 transition-all group">
-                <div className="h-32 bg-zinc-950 flex items-center justify-center relative">
-                  <Play size={32} className="text-zinc-800 group-hover:text-red-600 transition-colors" />
+              <div key={room.id} className="glass-card rounded-[2rem] overflow-hidden group hover:border-red-500/50 transition-all duration-500 hover:-translate-y-2">
+                <div className="h-40 bg-zinc-950/50 flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent opacity-60" />
+                  <Play size={48} className="text-zinc-800 group-hover:text-red-600 transition-all duration-500 group-hover:scale-125 z-10" />
                   {room.hasPassword && (
-                    <div className="absolute top-2 right-2 p-1.5 bg-black/40 backdrop-blur-md rounded-lg">
-                      <Lock size={14} className="text-zinc-400" />
+                    <div className="absolute top-4 right-4 p-2 glass rounded-xl z-20">
+                      <Lock size={16} className="text-red-400" />
                     </div>
                   )}
+                  <div className="absolute bottom-4 left-4 z-20">
+                    <span className="px-3 py-1 bg-red-600/20 text-red-500 border border-red-500/30 rounded-full text-[10px] font-black tracking-widest uppercase">Ao Vivo</span>
+                  </div>
                 </div>
-                <div className="p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-2">
+                <div className="p-6 space-y-6">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h3 className="text-white font-bold truncate">{room.name}</h3>
-                      <p className="text-xs text-zinc-500 mt-1">{room.users.length} usuários</p>
+                      <h3 className="text-xl font-black text-white truncate tracking-tight">{room.name}</h3>
+                      <p className="text-sm font-bold text-zinc-500 mt-1 uppercase tracking-tighter">{room.users.length} ESPECTADORES</p>
                     </div>
-                    <div className="flex -space-x-2">
+                    <div className="flex -space-x-3">
                       {room.users.slice(0, 3).map((u) => (
-                        <div key={u.id} className="w-6 h-6 rounded-full border-2 border-zinc-900 bg-zinc-800 overflow-hidden text-[8px] flex items-center justify-center text-white">
-                          {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover" /> : u.username.charAt(0)}
+                        <div key={u.id} className="w-9 h-9 rounded-full border-2 border-zinc-900 bg-zinc-800 overflow-hidden shadow-xl ring-2 ring-white/5">
+                          {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{u.username.charAt(0)}</div>}
                         </div>
                       ))}
+                      {room.users.length > 3 && (
+                        <div className="w-9 h-9 rounded-full border-2 border-zinc-900 bg-red-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl">
+                          +{room.users.length - 3}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button
                     onClick={() => handleJoinClick(room)}
-                    className="w-full py-2 bg-zinc-800 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-all"
+                    className="w-full py-4 bg-white/5 hover:bg-red-600 text-white text-sm font-black rounded-2xl transition-all group-hover:glow-red uppercase tracking-widest border border-white/5 hover:border-red-500"
                   >
-                    Entrar
+                    ENTRAR NA SESSÃO
                   </button>
                 </div>
               </div>
@@ -198,41 +219,47 @@ export default function Home({ socket, profile, onJoinRoom }: HomeProps) {
       </section>
 
       {/* Movie Library Section */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Film size={24} className="text-red-600" />
-              Minha Biblioteca
+      <section className="space-y-8">
+        <div className="flex items-end justify-between">
+          <div className="space-y-2">
+            <h2 className="text-4xl font-black text-white tracking-tighter flex items-center gap-3 uppercase">
+              <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center glow-accent">
+                <Film size={28} className="text-purple-500" />
+              </div>
+              Minha Lista
             </h2>
-            <p className="text-zinc-500 text-sm">Seus vídeos e filmes salvos</p>
+            <p className="text-zinc-500 font-medium tracking-wide">Seus filmes e séries favoritos salvos</p>
           </div>
           <button
             onClick={() => setShowAddMovieModal(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-xl transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-purple-600 text-white font-bold rounded-2xl transition-all border border-white/10 hover:border-purple-500"
           >
-            <Plus size={18} />
-            Adicionar Filme
+            <Plus size={20} />
+            NOVO FILME
           </button>
         </div>
 
         {myMovies.length === 0 ? (
-          <div className="py-12 bg-zinc-900/40 rounded-3xl border border-zinc-800/50 flex flex-col items-center justify-center text-center">
-            <Film size={40} className="text-zinc-800 mb-3" />
-            <p className="text-zinc-400">Sua biblioteca está vazia.</p>
+          <div className="py-24 glass rounded-[2.5rem] border-white/5 flex flex-col items-center justify-center text-center space-y-4">
+            <Film size={48} className="text-zinc-800" />
+            <p className="text-zinc-500 font-medium">Sua lista está vazia. Comece a adicionar agora!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {myMovies.map((movie) => (
-              <div key={movie.id} className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer">
-                <div className="aspect-video bg-zinc-950 relative overflow-hidden">
-                  <img src={movie.thumbnail} alt={movie.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play size={24} className="text-white fill-white" />
+              <div key={movie.id} className="glass-card rounded-[1.5rem] overflow-hidden group hover:scale-[1.05] transition-all duration-500 cursor-pointer border-white/5 hover:border-purple-500 shadow-2xl">
+                <div className="aspect-[2/3] bg-zinc-950 relative overflow-hidden">
+                  <img src={movie.thumbnail} alt={movie.title} className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-80" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 scale-50 group-hover:scale-100 backdrop-blur-sm bg-purple-600/10">
+                    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-2xl glow-accent">
+                      <Play size={28} className="text-purple-600 fill-purple-600 ml-1" />
+                    </div>
                   </div>
-                </div>
-                <div className="p-3">
-                  <h3 className="text-sm font-medium text-white truncate">{movie.title}</h3>
+                  <div className="absolute bottom-4 left-4 right-4 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                    <h3 className="text-lg font-black text-white leading-tight drop-shadow-lg">{movie.title}</h3>
+                    <p className="text-[10px] text-purple-400 font-black uppercase tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Assistir Agora</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -242,31 +269,37 @@ export default function Home({ socket, profile, onJoinRoom }: HomeProps) {
 
       {/* Modals */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-2xl transition-all">
+          <div className="glass-card rounded-[2.5rem] p-8 w-full max-w-md space-y-8 animate-in zoom-in-95 duration-300 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Criar Sala</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-zinc-500 hover:text-white transition-colors">
+              <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Configurar Sala</h2>
+              <button onClick={() => setShowCreateModal(false)} className="w-10 h-10 glass rounded-xl flex items-center justify-center text-zinc-500 hover:text-white transition-all hover:rotate-90">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleCreateRoom} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Nome da sala"
-                value={newRoomName}
-                onChange={e => setNewRoomName(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-red-600 outline-none text-white"
-              />
-              <input
-                type="password"
-                placeholder="Senha (opcional)"
-                value={newRoomPassword}
-                onChange={e => setNewRoomPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-red-600 outline-none text-white"
-              />
-              <button className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all">
-                Criar Sala Agora
+            <form onSubmit={handleCreateRoom} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Nome da Experiência</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Cine Night"
+                  value={newRoomName}
+                  onChange={e => setNewRoomName(e.target.value)}
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-red-600 focus:bg-white/10 outline-none text-white font-bold transition-all placeholder:text-zinc-700"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Senha (Privacidade)</label>
+                <input
+                  type="password"
+                  placeholder="Deixe vazio para sala aberta"
+                  value={newRoomPassword}
+                  onChange={e => setNewRoomPassword(e.target.value)}
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-red-600 focus:bg-white/10 outline-none text-white font-bold transition-all placeholder:text-zinc-700"
+                />
+              </div>
+              <button className="w-full py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-900/20 uppercase tracking-widest glow-red">
+                LANÇAR SALA AGORA
               </button>
             </form>
           </div>
@@ -274,33 +307,39 @@ export default function Home({ socket, profile, onJoinRoom }: HomeProps) {
       )}
 
       {showAddMovieModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-2xl">
+          <div className="glass-card rounded-[2.5rem] p-8 w-full max-w-md space-y-8 animate-in zoom-in-95 duration-300 border-white/10">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Adicionar vídeo</h2>
-              <button onClick={() => setShowAddMovieModal(false)} className="text-zinc-500 hover:text-white transition-colors">
+              <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Novo Conteúdo</h2>
+              <button onClick={() => setShowAddMovieModal(false)} className="w-10 h-10 glass rounded-xl flex items-center justify-center text-zinc-500 hover:text-white transition-all hover:rotate-90">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleAddMovie} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Título do filme/vídeo"
-                value={newMovieTitle}
-                onChange={e => setNewMovieTitle(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-red-600 outline-none text-white"
-                required
-              />
-              <input
-                type="text"
-                placeholder="URL do vídeo (YouTube, MP4, etc)"
-                value={newMovieUrl}
-                onChange={e => setNewMovieUrl(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-red-600 outline-none text-white"
-                required
-              />
-              <button className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all">
-                Salvar na Biblioteca
+            <form onSubmit={handleAddMovie} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Título do Vídeo</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Trailer Superman"
+                  value={newMovieTitle}
+                  onChange={e => setNewMovieTitle(e.target.value)}
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-purple-600 focus:bg-white/10 outline-none text-white font-bold transition-all placeholder:text-zinc-700"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Link (Direct URL)</label>
+                <input
+                  type="text"
+                  placeholder="YouTube, MP4, etc"
+                  value={newMovieUrl}
+                  onChange={e => setNewMovieUrl(e.target.value)}
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-purple-600 focus:bg-white/10 outline-none text-white font-bold transition-all placeholder:text-zinc-700"
+                  required
+                />
+              </div>
+              <button className="w-full py-5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-purple-900/20 uppercase tracking-widest glow-accent">
+                ADICIONAR À MINHA LISTA
               </button>
             </form>
           </div>
@@ -308,22 +347,27 @@ export default function Home({ socket, profile, onJoinRoom }: HomeProps) {
       )}
 
       {selectedRoom && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-4">
-            <h2 className="text-xl font-bold text-white">Sala Protegida</h2>
-            <p className="text-zinc-400 text-sm">Esta sala exige uma senha para entrar.</p>
-            <form onSubmit={handleJoinWithPassword} className="space-y-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-2xl">
+          <div className="glass-card rounded-[2.5rem] p-8 w-full max-w-md space-y-6 animate-in zoom-in-95 duration-300">
+            <div className="w-20 h-20 glass rounded-[2rem] flex items-center justify-center mx-auto glow-red mb-4">
+              <Lock size={32} className="text-red-500" />
+            </div>
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black text-white tracking-tighter uppercase">ESTA SALA É PRIVADA</h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-tight text-sm">Insira o código de acesso para entrar</p>
+            </div>
+            <form onSubmit={handleJoinWithPassword} className="space-y-6 pt-4">
               <input
                 type="password"
-                placeholder="Senha da sala"
+                placeholder="SENHA DA SALA"
                 value={joinPassword}
                 onChange={e => setJoinPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-red-600 outline-none text-white"
+                className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-2xl focus:border-red-600 outline-none text-center text-2xl font-black tracking-[0.5em] focus:bg-white/10 text-white"
                 autoFocus
               />
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setSelectedRoom(null)} className="flex-1 py-3 bg-zinc-800 text-white font-bold rounded-xl">Cancelar</button>
-                <button type="submit" className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl">Entrar</button>
+              <div className="flex gap-4">
+                <button type="button" onClick={() => setSelectedRoom(null)} className="flex-1 py-4 glass text-white font-black rounded-2xl hover:bg-white/10 transition-all uppercase tracking-widest">VOLTAR</button>
+                <button type="submit" className="flex-1 py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all uppercase tracking-widest glow-red">ENTRAR</button>
               </div>
             </form>
           </div>

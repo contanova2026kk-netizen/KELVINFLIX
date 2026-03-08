@@ -29,21 +29,21 @@ const fontOptions = [
 ];
 
 const customSymbols = [
-  '★', '☆', '✦', '✧', '✪', '✫', '✬', '✭', '✮', '✯', 
-  '✰', '♡', '♥', '❥', '❦', '❧', '☙', '♔', '♕', '♚', 
+  '★', '☆', '✦', '✧', '✪', '✫', '✬', '✭', '✮', '✯',
+  '✰', '♡', '♥', '❥', '❦', '❧', '☙', '♔', '♕', '♚',
   '♛', '⚜', '♪', '♫', '♬', '⚡', '🔥', '✨', '🌟', '💫'
 ];
 
 const singleEmojis = [
-  '😂', '💀', '🤡', '🗿', '👀', '🔥', '🤓', '😎', '🤔', '😭', 
-  '🤬', '🥺', '😏', '👍', '👎', '❤️', '💩', '👽', '👻', '🤌', 
+  '😂', '💀', '🤡', '🗿', '👀', '🔥', '🤓', '😎', '🤔', '😭',
+  '🤬', '🥺', '😏', '👍', '👎', '❤️', '💩', '👽', '👻', '🤌',
   '🫶', '✨', '💯', '🙏', '🤷‍♂️', '🤦‍♂️', '🎉', '🥶', '🥵', '🤯',
   '😈', '🤫', '🥱', '🤮', '🤑', '🤠', '🥳', '🥸', '😻', '😹'
 ];
 
 const emojiCombos = [
-  '👁️👄👁️', '👉👈', '🏃‍♂️💨', '🧍‍♂️...', '🗣️🔥', 
-  '🤡🔪', '💀🎺', '💅✨', '🍿👀', '😭🔫', 
+  '👁️👄👁️', '👉👈', '🏃‍♂️💨', '🧍‍♂️...', '🗣️🔥',
+  '🤡🔪', '💀🎺', '💅✨', '🍿👀', '😭🔫',
   '🧠💥', '🤌🍝', '🤝💰', '👀💦', '🔥🚒'
 ];
 
@@ -76,40 +76,46 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-8 pb-12">
-      
+    <div className="max-w-2xl mx-auto space-y-12 pb-20">
+
       {/* Profile Section */}
-      <div className="bg-zinc-900 p-6 md:p-8 rounded-2xl border border-zinc-800 space-y-8 relative">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl md:text-3xl font-black text-white">Seu Perfil</h2>
-          <p className="text-zinc-400 text-sm md:text-base">Personalize como os outros te veem</p>
+      <div className="glass-card p-8 md:p-12 rounded-[2.5rem] space-y-10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[100px] -z-10" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-600/5 blur-[100px] -z-10" />
+
+        <div className="text-center space-y-3">
+          <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Seu Perfil</h2>
+          <p className="text-zinc-500 font-medium tracking-wide">Como a comunidade Kevinflix te vê</p>
         </div>
 
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-6">
           <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-            <div className="w-32 h-32 rounded-full overflow-hidden bg-zinc-800 border-4 border-zinc-700 group-hover:border-red-500 transition-colors flex items-center justify-center">
+            <div className="w-40 h-40 rounded-[3rem] overflow-hidden bg-zinc-900 border-2 border-white/5 group-hover:border-red-500 transition-all duration-500 flex items-center justify-center shadow-2xl group-hover:glow-red group-hover:scale-105">
               {profile.avatar ? (
-                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
               ) : (
-                <Camera size={40} className="text-zinc-500 group-hover:text-red-500 transition-colors" />
+                <div className="flex flex-col items-center gap-2">
+                  <Camera size={48} className="text-zinc-700 group-hover:text-red-500 transition-colors" />
+                  <span className="text-[10px] font-black uppercase text-zinc-800 group-hover:text-red-900 tracking-[0.2em]">Upload</span>
+                </div>
               )}
             </div>
-            <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="text-white text-sm font-medium">Alterar Foto</span>
+            <div className="absolute inset-0 bg-red-600/20 rounded-[3rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+              <Camera size={24} className="text-white" />
             </div>
           </div>
-          <input 
-            type="file" 
-            accept="image/*" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleImageUpload} 
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
           />
         </div>
 
-        <div className="space-y-6">
-          <div className="space-y-2 relative">
-            <label className="text-sm font-medium text-zinc-300">Seu Nome</label>
+        <div className="space-y-8">
+          <div className="space-y-3 relative">
+            <label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em] ml-2">Identidade</label>
             <div className="relative flex items-center">
               <input
                 type="text"
@@ -118,27 +124,27 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
                   setProfile({ ...profile, username: e.target.value });
                   setIsSaved(false);
                 }}
-                placeholder="Digite seu nome"
-                className={`w-full pl-4 pr-24 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all text-white ${profile.fontStyle}`}
+                placeholder="Como quer ser chamado?"
+                className={`w-full px-8 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-red-500 focus:bg-white/10 transition-all text-white text-xl font-bold placeholder:text-zinc-700 ${profile.fontStyle}`}
               />
-              <div className="absolute right-2 flex items-center gap-1">
+              <div className="absolute right-3 flex items-center gap-2">
                 <motion.button
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.9, y: -4 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => { setShowFonts(!showFonts); setShowEmojis(false); }}
-                  className={`p-2 rounded-lg transition-colors ${showFonts ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${showFonts ? 'bg-red-600 text-white glow-red' : 'glass text-zinc-500 hover:text-white'}`}
                   title="Estilos de Fonte"
                 >
-                  <Type size={18} />
+                  <Type size={20} />
                 </motion.button>
                 <motion.button
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.9, y: -4 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => { setShowEmojis(!showEmojis); setShowFonts(false); }}
-                  className={`p-2 rounded-lg transition-colors ${showEmojis ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${showEmojis ? 'bg-purple-600 text-white glow-accent' : 'glass text-zinc-500 hover:text-white'}`}
                   title="Emojis e Símbolos"
                 >
-                  <Smile size={18} />
+                  <Smile size={20} />
                 </motion.button>
               </div>
             </div>
@@ -146,13 +152,13 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
             {/* Fonts Popover */}
             <AnimatePresence>
               {showFonts && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-full left-0 right-0 mt-2 p-3 bg-zinc-950 border border-zinc-800 rounded-xl shadow-xl z-50"
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 right-0 mt-4 p-4 glass rounded-[2rem] shadow-2xl z-50 border-white/20"
                 >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1 pr-2 custom-scrollbar">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-72 overflow-y-auto p-1 custom-scrollbar">
                     {fontOptions.map((font) => (
                       <button
                         key={font.value}
@@ -161,13 +167,12 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
                           setIsSaved(false);
                           setShowFonts(false);
                         }}
-                        className={`p-2 rounded-xl border text-center transition-colors ${
-                          profile.fontStyle === font.value 
-                            ? 'bg-red-600/20 border-red-500 text-red-500' 
-                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
-                        }`}
+                        className={`p-4 rounded-xl border text-center transition-all duration-300 ${profile.fontStyle === font.value
+                            ? 'bg-red-600 text-white glow-red border-red-400'
+                            : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:border-white/20 hover:text-white'
+                          }`}
                       >
-                        <span className={`${font.value} text-sm`}>{font.name}</span>
+                        <span className={`${font.value} text-base font-medium`}>{font.name}</span>
                       </button>
                     ))}
                   </div>
@@ -178,59 +183,42 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
             {/* Emojis Popover */}
             <AnimatePresence>
               {showEmojis && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-full left-0 right-0 mt-2 p-4 bg-zinc-950 border border-zinc-800 rounded-xl shadow-xl z-50"
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 right-0 mt-4 p-6 glass rounded-[2rem] shadow-2xl z-50 border-white/20"
                 >
-                  <div className="max-h-80 overflow-y-auto custom-scrollbar pr-2 space-y-6">
+                  <div className="max-h-96 overflow-y-auto custom-scrollbar pr-2 space-y-8">
                     <div>
-                      <h4 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider">Combos</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <h4 className="text-[10px] font-black text-zinc-500 mb-4 uppercase tracking-[0.3em] ml-1">Combinações Sugeridas</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {emojiCombos.map(combo => (
                           <motion.button
-                            whileHover={{ scale: 1.05, backgroundColor: '#3f3f46' }}
+                            whileHover={{ scale: 1.05, backgroundColor: 'rgba(147, 51, 234, 0.2)' }}
                             whileTap={{ scale: 0.95 }}
                             key={combo}
                             onClick={() => addTextToName(combo)}
-                            className="text-sm p-2 bg-zinc-900 rounded-lg hover:bg-zinc-800 transition-colors text-white"
+                            className="text-lg p-3 glass rounded-xl text-white transition-all border-white/5 hover:border-purple-500/50"
                           >
                             {combo}
                           </motion.button>
                         ))}
                       </div>
                     </div>
-                    
-                    <div>
-                      <h4 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider">Símbolos</h4>
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                        {customSymbols.map(symbol => (
-                          <motion.button
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.9 }}
-                            key={symbol}
-                            onClick={() => addTextToName(symbol)}
-                            className="text-xl p-2 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors flex items-center justify-center"
-                          >
-                            {symbol}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
 
                     <div>
-                      <h4 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider">Emojis</h4>
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                        {singleEmojis.map(emoji => (
+                      <h4 className="text-[10px] font-black text-zinc-500 mb-4 uppercase tracking-[0.3em] ml-1">Símbolos de Prestígio</h4>
+                      <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
+                        {customSymbols.map(symbol => (
                           <motion.button
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.9 }}
-                            key={emoji}
-                            onClick={() => addTextToName(emoji)}
-                            className="text-xl p-2 hover:bg-zinc-800 rounded-lg transition-colors flex items-center justify-center"
+                            whileHover={{ scale: 1.3, color: '#fff' }}
+                            whileTap={{ scale: 0.8 }}
+                            key={symbol}
+                            onClick={() => addTextToName(symbol)}
+                            className="text-2xl h-14 glass rounded-xl text-zinc-400 flex items-center justify-center transition-all hover:bg-white/10"
                           >
-                            {emoji}
+                            {symbol}
                           </motion.button>
                         ))}
                       </div>
@@ -246,21 +234,20 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
             whileTap={{ scale: 0.98 }}
             onClick={handleSave}
             disabled={!profile.username.trim()}
-            className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-              isSaved 
-                ? 'bg-green-600 text-white' 
-                : 'bg-red-600 hover:bg-red-700 text-white disabled:bg-zinc-800 disabled:text-zinc-500'
-            }`}
+            className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-500 ${isSaved
+                ? 'bg-green-600 text-white glow-green'
+                : 'bg-red-600 hover:bg-red-700 text-white glow-red disabled:bg-zinc-900 disabled:text-zinc-700 disabled:glow-none'
+              }`}
           >
             {isSaved ? (
               <>
-                <Check size={20} />
-                Salvo com sucesso!
+                <Check size={24} />
+                ALTERAÇÕES SALVAS
               </>
             ) : (
               <>
-                <Save size={20} />
-                Salvar Perfil
+                <Save size={24} />
+                CONFIRMAR PERFIL
               </>
             )}
           </motion.button>
@@ -268,52 +255,37 @@ export default function Profile({ profile, setProfile }: ProfileProps) {
       </div>
 
       {/* About Section */}
-      <div className="bg-zinc-900 p-6 md:p-8 rounded-2xl border border-zinc-800 space-y-6 text-zinc-300">
-        <div className="text-center space-y-4 mb-8">
-          <h1 className="text-4xl font-black text-red-600 tracking-tighter">KEVINFLIX</h1>
-          <p className="text-zinc-400">A melhor plataforma para assistir e interagir com amigos.</p>
+      <div className="glass-card p-10 md:p-14 rounded-[3rem] space-y-12 text-zinc-400 relative overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-red-600/10 rounded-full blur-[80px]" />
+
+        <div className="text-center space-y-4 relative">
+          <h1 className="text-5xl font-black text-red-600 tracking-tight drop-shadow-2xl">KEVINFLIX</h1>
+          <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">The Ultimate Cinema Experience</p>
         </div>
 
-        <div className="space-y-6 bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <Users className="text-red-500" /> Salas Simultâneas
-            </h3>
-            <p className="text-sm leading-relaxed">
-              Crie salas privadas ou públicas para até 6 pessoas. Assista vídeos do YouTube sincronizados com todos os participantes em tempo real. Se você pausar, pausa para todos!
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <Sparkles className="text-red-500" /> Chat Dinâmico
-            </h3>
-            <p className="text-sm leading-relaxed">
-              Converse com seus amigos usando um chat super rápido. Envie mensagens, imagens e use emojis gigantes. Veja quem entrou ou saiu da sala em tempo real.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <Camera className="text-red-500" /> Lousa Interativa
-            </h3>
-            <p className="text-sm leading-relaxed">
-              Abra a folha de desenho a qualquer momento para rabiscar, explicar algo ou jogar com seus amigos. Todos veem o desenho em tempo real e podem desenhar juntos!
-            </p>
-          </div>
-          
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <User className="text-red-500" /> Personalização Extrema
-            </h3>
-            <p className="text-sm leading-relaxed">
-              Escolha entre dezenas de fontes para o seu nome, adicione símbolos especiais e coloque sua foto de perfil favorita para se destacar nas salas.
-            </p>
-          </div>
+        <div className="grid gap-8 relative">
+          {[
+            { icon: Users, title: 'Imerção em Grupo', desc: 'Assista com sincronia perfeita. Se você pausar, todo mundo pausa. Sinta-se na mesma sala física.' },
+            { icon: Sparkles, title: 'Chat Ultra-Rápido', desc: 'Comunicação instantânea com emojis gigantes e feedback visual de quem está online.' },
+            { icon: Camera, title: 'Lousa Mágica', desc: 'A lousa agora é parte da experiência. Desenhe, explique ou jogue simultaneamente.' },
+            { icon: User, title: 'Sua Identidade', desc: 'Sua presença é marcante com perfis totalmente customizáveis e fontes exclusivas.' }
+          ].map((item, i) => (
+            <div key={i} className="flex gap-6 items-start group">
+              <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:glow-red transition-all group-hover:bg-red-600 group-hover:text-white duration-500">
+                <item.icon size={26} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-red-500 transition-colors">{item.title}</h3>
+                <p className="text-sm leading-relaxed font-medium">{item.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        
-        <div className="text-center text-xs text-zinc-500 pt-4">
-          <p>Versão 2.0.0 • Desenvolvido por kelvin lex</p>
+
+        <div className="text-center pt-8 border-t border-white/5">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600">
+            Versão 3.5.0 Premium • Crafted with passion by kelvin lex
+          </p>
         </div>
       </div>
 

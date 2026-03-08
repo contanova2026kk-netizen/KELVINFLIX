@@ -79,14 +79,14 @@ async function startServer() {
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
-    socket.on("register-user", async ({ username, avatar, fontStyle }) => {
+    socket.on("register-user", async ({ id, username, avatar, fontStyle }) => {
       try {
         const { error } = await supabase
           .from('users')
-          .upsert({ id: socket.id, username, avatar, font_style: fontStyle });
+          .upsert({ id, username, avatar, font_style: fontStyle });
 
         if (!error) {
-          socket.emit("user-registered", { id: socket.id, username });
+          socket.emit("user-registered", { id, username });
         }
       } catch (err) {
         console.error("Error registering user:", err);
@@ -105,7 +105,8 @@ async function startServer() {
           const { data: friends } = await supabase
             .from('friends')
             .select(`
-              friend:users!friends_friend_id_fkey (
+              users!friends_friend_id_fkey (
+                id,
                 username,
                 avatar,
                 font_style
@@ -113,7 +114,7 @@ async function startServer() {
             `)
             .eq('user_id', user.id);
 
-          socket.emit("friends-list", friends?.map((f: any) => f.friend) || []);
+          socket.emit("friends-list", friends?.map((f: any) => f.users) || []);
         }
       } catch (err) {
         console.error("Error getting friends:", err);
@@ -136,6 +137,36 @@ async function startServer() {
         }
       } catch (err) {
         socket.emit("friend-added", { success: false, message: "Erro ao adicionar amigo" });
+      }
+    });
+
+    socket.on("send-dm", async ({ senderId, receiverId, text }) => {
+      try {
+        const { data, error } = await supabase
+          .from('direct_messages')
+          .insert({ sender_id: senderId, receiver_id: receiverId, text })
+          .select()
+          .single();
+
+        if (!error) {
+          io.emit("new-dm", data);
+        }
+      } catch (err) {
+        console.error("Error sending DM:", err);
+      }
+    });
+
+    socket.on("get-dms", async ({ userId, friendId }) => {
+      try {
+        const { data } = await supabase
+          .from('direct_messages')
+          .select('*')
+          .or(`and(sender_id.eq.${userId},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${userId})`)
+          .order('timestamp', { ascending: true });
+
+        socket.emit("dms-list", { friendId, messages: data || [] });
+      } catch (err) {
+        console.error("Error getting DMs:", err);
       }
     });
 
@@ -175,6 +206,20 @@ async function startServer() {
       }
     });
 
+    socket.on("search-users", async (query) => {
+      try {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, username, avatar')
+          .ilike('username', `%${query}%`)
+          .limit(10);
+
+        socket.emit("search-results", users || []);
+      } catch (err) {
+        console.error("Error searching users:", err);
+      }
+    });
+
     socket.on("create-room", ({ roomId, name, password, username, avatar }) => {
       if (!rooms.has(roomId)) {
         rooms.set(roomId, {
@@ -211,7 +256,7 @@ async function startServer() {
       callback({ success: true });
     });
 
-    socket.on("join-room", ({ roomId, username, avatar, password }) => {
+    socket.on("join-room", ({ roomId, id, username, avatar, password }) => {
       const room = rooms.get(roomId);
 
       if (!room) {
@@ -231,7 +276,8 @@ async function startServer() {
 
       socket.join(roomId);
 
-      const user = { id: socket.id, username, avatar };
+      const userId = id || socket.id;
+      const user = { id: userId, username, avatar };
       room.users.add(user);
       io.emit("rooms-updated");
 
@@ -278,7 +324,7 @@ async function startServer() {
       socket.on("send-message", (text) => {
         const msg: Message = {
           id: uuidv4(),
-          userId: socket.id,
+          userId: userId,
           username,
           avatar,
           text,
